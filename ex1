@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# ### Conclusion
+Hierarchical Clustering with Euclidean Distance (Ward's Linkage) produced the best silhouette score (0.161), indicating better clustering quality compared to Minkowski and Cosine.
+The RandomForestClassifier trained after clustering (using Euclidean clusters) had a lower accuracy (0.6375) compared to the baseline accuracy (0.8625), suggesting that the dimensionality reduction reduced the classifier's effectiveness.
+Minkowski and Cosine Similarity produced lower silhouette scores, and thus, did not perform as well as Euclidean distance for clustering this dataset.
+# ### Steps
+
+# 1. Retrieve and Load the Olivetti Faces Dataset:
+
+# In[8]:
+
+
+from sklearn.datasets import fetch_olivetti_faces
+
+# Load the dataset
+data = fetch_olivetti_faces()
+X, y = data.data, data.target
+
+
+# 2. Split the Dataset (Training, Validation, Test):
+
+# In[9]:
+
+
+from sklearn.model_selection import train_test_split
+
+# Split into training and test sets, stratifying by person
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.4, stratify=y, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=42)
+
+
+# 3. Train a Classifier with K-Fold Cross Validation
+
+# In[10]:
+
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+
+clf = RandomForestClassifier()
+scores = cross_val_score(clf, X_train, y_train, cv=5)
+print("K-Fold CV Accuracy: ", scores.mean())
+
+
+# 4. Apply Hierarchical Clustering (AHC/DHC) with Different Similarity Measures:
+
+# In[17]:
+
+
+# Agglomerative clustering with Minkowski distance (p=3) and 'average' linkage
+hc_minkowski = AgglomerativeClustering(n_clusters=40, metric='minkowski', linkage='average', compute_distances=True)
+labels_minkowski = hc_minkowski.fit_predict(X_train)
+
+
+# In[18]:
+
+
+# Agglomerative clustering with Cosine similarity and 'average' linkage
+hc_cosine = AgglomerativeClustering(n_clusters=40, metric='cosine', linkage='average')
+labels_cosine = hc_cosine.fit_predict(X_train)
+
+
+# In[19]:
+
+
+# Ward linkage is valid with Euclidean distance
+hc_euclidean = AgglomerativeClustering(n_clusters=40, metric='euclidean', linkage='ward')
+labels_euclidean = hc_euclidean.fit_predict(X_train)
+
+
+# 5.Evaluate Using Silhouette Scores
+
+# In[21]:
+
+
+from sklearn.metrics import silhouette_score
+
+silhouette_euclidean = silhouette_score(X_train, labels_euclidean)
+silhouette_minkowski = silhouette_score(X_train, labels_minkowski)
+silhouette_cosine = silhouette_score(X_train, labels_cosine)
+
+print("Silhouette Score (Euclidean):", silhouette_euclidean)
+print("Silhouette Score (Minkowski):", silhouette_minkowski)
+print("Silhouette Score (Cosine):", silhouette_cosine)
+
+
+# 6.Train Classifier with Reduced Dimensionality
+
+# In[22]:
+
+
+clf_with_clusters = RandomForestClassifier()
+scores_with_clusters = cross_val_score(clf_with_clusters, labels_euclidean.reshape(-1, 1), y_train, cv=5)
+print("K-Fold CV Accuracy with Euclidean Clusters: ", scores_with_clusters.mean())
+
+
+# In[ ]:
+
+
+
+
